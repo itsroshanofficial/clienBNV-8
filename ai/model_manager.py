@@ -26,12 +26,18 @@ def generate(prompt, system="You are a helpful business assistant."):
     
     try:
         genai.configure(api_key=api_key)
-        # Model changed to gemini-pro to resolve 404 model not found error
-        model = genai.GenerativeModel('gemini-pro')
         
-        full_prompt = f"{system}\n\n{prompt}"
-        
-        response = model.generate_content(full_prompt)
-        return response.text
+        # Yahan hum gemini-1.5-flash ya gemini-1.5-pro try karte hain
+        for m_name in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']:
+            try:
+                model = genai.GenerativeModel(m_name)
+                full_prompt = f"{system}\n\n{prompt}"
+                response = model.generate_content(full_prompt)
+                if response and response.text:
+                    return response.text
+            except Exception:
+                continue
+                
+        return "AI Generation Error: Could not connect with available models using this API key."
     except Exception as e:
         return f"AI Generation Error: {str(e)}"
