@@ -1,6 +1,8 @@
 import os
 import streamlit as st
-import google.generativeai as genai
+import json
+import urllib.request
+import urllib.error
 
 def local_model_available():
     """Checks if Google Gemini API key is configured."""
@@ -11,7 +13,7 @@ def local_model_available():
 
 def generate(prompt, system="You are a helpful business assistant."):
     """
-    Generates a response using Google Gemini.
+    Generates a response using Google Gemini REST API directly.
     """
     try:
         api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -24,20 +26,28 @@ def generate(prompt, system="You are a helpful business assistant."):
             "Please add your API key to enable AI features."
         )
     
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    
+    full_text = f"{system}\n\n{prompt}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": full_text}]
+        }]
+    }
+    
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    
     try:
-        genai.configure(api_key=api_key)
-        
-        # Yahan hum gemini-1.5-flash ya gemini-1.5-pro try karte hain
-        for m_name in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']:
-            try:
-                model = genai.GenerativeModel(m_name)
-                full_prompt = f"{system}\n\n{prompt}"
-                response = model.generate_content(full_prompt)
-                if response and response.text:
-                    return response.text
-            except Exception:
-                continue
-                
-        return "AI Generation Error: Could not connect with available models using this API key."
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            candidate = res_data.get("candidates", [])[0]
+            content = candidate.get("content", {})
+            parts = content.get("parts", [])[0]
+            return parts.get("text", "No response text found.")
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        return f"AI Generation Error (HTTP {e.code}): {error_body}"
     except Exception as e:
         return f"AI Generation Error: {str(e)}"
