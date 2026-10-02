@@ -11,7 +11,7 @@ def local_model_available():
 
 def generate(prompt, system="You are a helpful business assistant."):
     """
-    Generates a response using Google Gemini 1.5 Flash (Free Tier).
+    Generates a response using Google Gemini.
     """
     try:
         api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -26,8 +26,8 @@ def generate(prompt, system="You are a helpful business assistant."):
     
     try:
         genai.configure(api_key=api_key)
-        # Fast aur free developer model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Model changed to gemini-pro to resolve 404 model not found error
+        model = genai.GenerativeModel('gemini-pro')
         
         full_prompt = f"{system}\n\n{prompt}"
         
